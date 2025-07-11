@@ -1,58 +1,27 @@
-import llama_cpp
+import json
+import requests
 
 
 DEFAULT_MODEL = 'gemma3'
+VKLLAMA_GENERATE_URL = 'http://{address}/api/generate'
 
-MODELS = [
-    {
-        'name': 'gemma3',
-        'path': '/home/arch/AI/models/llm/gemma-3-4b-it-Q4_K_M.gguf'
-    },
-    {
-        'name': 'qwen3',
-        'path': '/home/arch/AI/models/llm/Qwen3-8B-Q4_K_M.gguf'
-    },
-    {
-        'name': 'qwen3:4b',
-        'path': '/home/arch/AI/models/llm/Qwen3-4B-Q4_K_M.gguf'
-    }
-]
 
 def run(args):
-    # get prompt and model
     prompt = ' '.join(args.prompt)
-    model = next((e for e in MODELS if e['name'] == args.model), None)
+    payload = {
+        'model': args.model,
+        'seed': args.seed,
+        'stream': args.stream,
+        'prompt': prompt
+    }
 
-    if not model:
-        print(f'error: model "{args.model}" not found!')
-        return
+    try:
+        response = requests.post(VKLLAMA_GENERATE_URL.format(address=args.address), json=payload, stream=args.stream)
+        response.raise_for_status()
 
-    # init
-    llm = llama_cpp.Llama(
-        model_path=model['path'],
-        n_gpu_layers=-1,
-        n_ctx=2048,
-        verbose=False
-    )
-
-    out = llm.create_chat_completion(
-        messages=[
-            {
-                'role': 'user',
-                'content': prompt
-            }
-        ],
-        max_tokens=16,
-        stream=args.stream
-    )
-
-    # run
-    if args.stream:
-        # stream output
-        for msg in out:
-            if 'content' in msg['choices'][0]['delta']:
-                txt = msg['choices'][0]['delta']['content']
-                print(txt, end='', flush=True)
+        for chunk in response.iter_lines():
+            msg = json.loads(chunk)
+            print(msg['response'], end='', flush=True)
         print()
-    else:
-        print(out['choices'][0]['message']['content'])
+    except Exception as e:
+        print(f'An unexpected error occurred: {e}')
