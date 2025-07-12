@@ -1,5 +1,7 @@
+import os
 import json
 import random
+import hashlib
 import datetime
 import llama_cpp
 import http.server
@@ -7,28 +9,89 @@ import socketserver
 
 
 DEFAULT_MODEL = 'gemma3'
-MODELS_CONFIG = [
-    {
-        'name': 'gemma3',
-        'path': '/home/arch/AI/models/llm/gemma-3-4b-it-Q4_K_M.gguf'
-    },
-    {
-        'name': 'qwen3',
-        'path': '/home/arch/AI/models/llm/Qwen3-8B-Q4_K_M.gguf'
-    },
-    {
-        'name': 'qwen3:4b',
-        'path': '/home/arch/AI/models/llm/Qwen3-4B-Q4_K_M.gguf'
-    }
-]
+DEFAULT_MODELS_PATH = '~/.vkllama/models'
+
+models_path = DEFAULT_MODELS_PATH
+
+
+def get_models():
+    expanded_models_path = os.path.expanduser(models_path)
+    os.makedirs(expanded_models_path, exist_ok=True)
+
+    # read models
+    with open(f'{expanded_models_path}/models.json', 'r') as f:
+        models_config = json.load(f)
+        return models_config
+    return None
+
+
+def calculate_file_sha256(filepath):
+    sha256_hash = hashlib.sha256()
+    try:
+        with open(filepath, 'rb') as f:
+            # Read and update hash string in chunks
+            for byte_block in iter(lambda: f.read(4096), b''):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+    except Exception as e:
+        print(f'Warning: Could not calculate SHA256 for {filepath}: {e}')
+        return 'sha256:error_calculating_digest'
 
 
 class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/api/tags':
+            self.handle_list_models()
+        else:
+            self.send_error(404, 'Not Found')
+
+    def handle_list_models(self):
+        try:
+            expanded_models_path = os.path.expanduser(models_path)
+            models = []
+            for model_info in get_models():
+                model_name = model_info['name']
+                full_model_path = os.path.join(expanded_models_path, model_info['filename'])
+
+                # get info
+                size = 0
+                modified_at = datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z' 
+                digest = model_info['digest'] if 'digest' in model_info else None
+
+                if os.path.exists(full_model_path):
+                    size = os.path.getsize(full_model_path)
+                    modified_at = datetime.datetime.fromtimestamp(os.path.getmtime(full_model_path)).isoformat(timespec='milliseconds') + 'Z'
+
+                    if not digest:
+                        digest = calculate_file_sha256(full_model_path)
+
+                models.append({
+                    'name': f'{model_name}:latest',
+                    'modified_at': modified_at,
+                    'size': size,
+                    'digest': digest
+                })
+
+            response_payload = {'models': models}
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_payload).encode('utf-8'))
+
+        except FileNotFoundError:
+            self.send_error(500, 'Internal Server Error', 'models.json not found in the models directory.')
+        except json.JSONDecodeError:
+            self.send_error(500, 'Internal Server Error', 'Error parsing models.json. Check file format.')
+        except Exception as e:
+            print(f'Error handling /api/tags: {e}')
+            self.send_error(500, 'Internal Server Error', f'An unexpected error occurred: {e}')
+
     def do_POST(self):
         if self.path == '/api/generate':
             self.handle_generate()
         else:
-            self.send_error(404, "Not Found")
+            self.send_error(404, 'Not Found')
 
     def handle_generate(self):
         try:
@@ -39,7 +102,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             # https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion
             model_name = request_payload.get('model', DEFAULT_MODEL)
             prompt = request_payload.get('prompt')
-            stream = request_payload.get('stream', False)
+            stream = request_payload.get('stream', True)
 
             # options
             options = request_payload.get('options', {})
@@ -54,17 +117,18 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             seed = options.get('seed', random.randint(0, 2**32 - 1))
 
             if not prompt:
-                self.send_error(400, "Bad Request", "Missing 'prompt' in request body.")
+                self.send_error(400, 'Bad Request', 'Missing "prompt" in request body.')
                 return
 
             # find model
-            model_config = next((e for e in MODELS_CONFIG if e['name'] == model_name), None)
+            model_info = next((e for e in get_models() if e['name'] == model_name), None)
 
-            if not model_config:
-                self.send_error(404, "Not Found", f"Model '{model_name}' not found.")
+            if not model_info:
+                self.send_error(404, 'Not Found', f'Model "{model_name}" not found.')
                 return
 
-            model_path = model_config['path']
+            expanded_models_path = os.path.expanduser(models_path)
+            model_path = os.path.join(expanded_models_path, model_info['filename'])
 
             # init llm
             llm = llama_cpp.Llama(
@@ -97,10 +161,10 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     msg = chunk['choices'][0]['delta'].get('content', '')
                     
                     ollama_chunk = {
-                        "model": model_name,
-                        "created_at": datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
-                        "response": msg,
-                        "done": False
+                        'model': model_name,
+                        'created_at': datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
+                        'response': msg,
+                        'done': False
                     }
 
                     # last chunk
@@ -130,14 +194,14 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 response_content = out['choices'][0]['message']['content']
 
                 ollama_response = {
-                    "model": model_name,
-                    "created_at": datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
-                    "response": response_content,
-                    "done": True,
-                    "total_duration": 0, # dumb
-                    "load_duration": 0,
-                    "prompt_eval_count": 0,
-                    "eval_count": 0
+                    'model': model_name,
+                    'created_at': datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
+                    'response': response_content,
+                    'done': True,
+                    'total_duration': 0, # dumb
+                    'load_duration': 0,
+                    'prompt_eval_count': 0,
+                    'eval_count': 0
                 }
 
                 self.send_response(200)
@@ -146,15 +210,15 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(ollama_response).encode('utf-8'))
 
         except json.JSONDecodeError:
-            self.send_error(400, "Bad Request", "Invalid JSON payload.")
+            self.send_error(400, 'Bad Request', 'Invalid JSON payload.')
         except KeyError as e:
-            self.send_error(400, "Bad Request", f"Missing key in request: {e}")
+            self.send_error(400, 'Bad Request', f'Missing key in request: {e}')
         except Exception as e:
-            print(f"Error handling /api/generate: {e}")
-            self.send_error(500, "Internal Server Error", f"An error occurred: {e}")
+            print(f'Error handling /api/generate: {e}')
+            self.send_error(500, 'Internal Server Error', f'An error occurred: {e}')
 
     def log_message(self, format, *args):
-        # print(f"[{self.log_date_time_string()}] {self.address_string()} - {format % args}")
+        # print(f'[{self.log_date_time_string()}] {self.address_string()} - {format % args}')
         pass
 
 
@@ -163,6 +227,9 @@ class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 def serve(args):
+    global models_path
+    models_path = args.models
+
     server_address = (args.host, args.port)
     httpd = ThreadedHTTPServer(server_address, VKLlamaRequestHandler)
     print(f'Starting vkllama server on http://{args.host}:{args.port}')

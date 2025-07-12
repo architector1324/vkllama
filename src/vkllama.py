@@ -2,6 +2,7 @@ import random
 import argparse
 
 import vkllama_run
+import vkllama_list
 import vkllama_serve
 
 
@@ -21,10 +22,15 @@ if __name__ == '__main__':
     run_parser.add_argument('prompt', nargs='+', type=str, help='Prompt for model')
     run_parser.add_argument('--help', action='help')
 
+    # list
+    list_parser = subparsers.add_parser('list', help='List available models', add_help=False)
+    list_parser.add_argument('-a', '--address', default='0.0.0.0:11435', type=str, help='Server host address')
+    list_parser.add_argument('--help', action='help')
+
     # serve
     serve_parser = subparsers.add_parser('serve', help='Start LLM server', add_help=False)
     serve_parser.add_argument('--host', default='0.0.0.0', type=str, help='Server host address')
-    # serve_parser.add_argument('-m', '--models', default=imagine_server_defs.DEFAULT_MODELS_PATH, type=str, help='SD models path')
+    serve_parser.add_argument('-m', '--models', default=vkllama_serve.DEFAULT_MODELS_PATH, type=str, help='LLM models path')
     serve_parser.add_argument('-p', '--port', default=11435, type=int, help='Server port')
     # serve_parser.add_argument('-d', '--device', default=imagine_server_defs.DEFAULT_DEVICE, type=str,  choices=['cpu', 'cuda', 'mps'], help='Model compute device')
     serve_parser.add_argument('--help', action='help')
@@ -33,6 +39,8 @@ if __name__ == '__main__':
 
     if args.command == 'run':
         vkllama_run.run(args)
+    elif args.command == 'list':
+        vkllama_list.list_models(args)
     elif args.command == 'serve':
         vkllama_serve.serve(args)
     else:
