@@ -115,13 +115,14 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             # https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion
             model_name = request_payload.get('model', DEFAULT_MODEL)
             prompt = request_payload.get('prompt')
+            system_prompt = request_payload.get('system', None)
             stream = request_payload.get('stream', True)
 
             # options
             options = request_payload.get('options', {})
 
             n_ctx = options.get('num_ctx', 2048)
-            max_tokens = options.get('num_predict', 128)
+            max_tokens = options.get('num_predict', 2048)
             temperature = options.get('temperature', 0.8)
             top_p = options.get('top_p', 0.9)
             top_k = options.get('top_k', 40)
@@ -152,6 +153,12 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 verbose=False
             )
 
+            # create messages
+            messages = []
+            if system_prompt:
+                messages.append({'role': 'system', 'content': system_prompt})
+            messages.append({'role': 'user', 'content': prompt})
+
             # generate
             if stream:
                 self.send_response(200)
@@ -159,7 +166,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
 
                 out = llm.create_chat_completion(
-                    messages=[{'role': 'user', 'content': prompt}],
+                    messages=messages,
                     max_tokens=max_tokens,
                     top_p=top_p,
                     top_k=top_k,
@@ -194,7 +201,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
 
             else:
                 out = llm.create_chat_completion(
-                    messages=[{'role': 'user', 'content': prompt}],
+                    messages=messages,
                     max_tokens=max_tokens,
                     top_p=top_p,
                     top_k=top_k,
@@ -250,7 +257,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
 
             options = request_payload.get('options', {})
             n_ctx = options.get('num_ctx', 2048)
-            max_tokens = options.get('num_predict', 128)
+            max_tokens = options.get('num_predict', 2048)
             temperature = options.get('temperature', 0.8)
             top_p = options.get('top_p', 0.9)
             top_k = options.get('top_k', 40)
