@@ -125,8 +125,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             temperature = options.get('temperature', 0.8)
             top_p = options.get('top_p', 0.9)
             top_k = options.get('top_k', 40)
-            frequency_penalty = options.get('frequency_penalty', 0.5)
-            presence_penalty = options.get('presence_penalty', 0.5)
+            frequency_penalty = options.get('frequency_penalty', 0.0)
+            presence_penalty = options.get('presence_penalty', 0.0)
             seed = options.get('seed', random.randint(0, 2**32 - 1))
 
             if not prompt:
@@ -254,8 +254,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             temperature = options.get('temperature', 0.8)
             top_p = options.get('top_p', 0.9)
             top_k = options.get('top_k', 40)
-            frequency_penalty = options.get('frequency_penalty', 0.0) # Ollama default is 0.0
-            presence_penalty = options.get('presence_penalty', 0.0)   # Ollama default is 0.0
+            frequency_penalty = options.get('frequency_penalty', 0.0)
+            presence_penalty = options.get('presence_penalty', 0.0)
             seed = options.get('seed', random.randint(0, 2**32 - 1))
 
             model_info = next((e for e in get_models() if e['name'] == model_name), None)
