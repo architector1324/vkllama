@@ -40,10 +40,17 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             model_name = request_payload.get('model', DEFAULT_MODEL)
             prompt = request_payload.get('prompt')
             stream = request_payload.get('stream', False)
-    
-            options = request_payload.get('options', {}) 
+
+            # options
+            options = request_payload.get('options', {})
+
+            n_ctx = options.get('num_ctx', 2048)
             max_tokens = options.get('num_predict', 128)
             temperature = options.get('temperature', 0.8)
+            top_p = options.get('top_p', 0.9)
+            top_k = options.get('top_k', 40)
+            frequency_penalty = options.get('frequency_penalty', 0.5)
+            presence_penalty = options.get('presence_penalty', 0.5)
             seed = options.get('seed', random.randint(0, 2**32 - 1))
 
             if not prompt:
@@ -63,7 +70,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             llm = llama_cpp.Llama(
                 model_path=model_path,
                 n_gpu_layers=-1,
-                # n_ctx=2048
+                n_ctx=n_ctx,
                 seed=seed,
                 verbose=False
             )
@@ -77,6 +84,10 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 out = llm.create_chat_completion(
                     messages=[{'role': 'user', 'content': prompt}],
                     max_tokens=max_tokens,
+                    top_p=top_p,
+                    top_k=top_k,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty,
                     temperature=temperature,
                     stream=True,
                 )
@@ -94,11 +105,11 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
 
                     # last chunk
                     if chunk['choices'][0].get('finish_reason') is not None:
-                         ollama_chunk['done'] = True
-                         ollama_chunk['total_duration'] = 0 # dumb
-                         ollama_chunk['load_duration'] = 0 # dumb
-                         ollama_chunk['prompt_eval_count'] = 0 # dumb
-                         ollama_chunk['eval_count'] = 0 # dumb
+                        ollama_chunk['done'] = True
+                        ollama_chunk['total_duration'] = 0 # dumb
+                        ollama_chunk['load_duration'] = 0 # dumb
+                        ollama_chunk['prompt_eval_count'] = 0 # dumb
+                        ollama_chunk['eval_count'] = 0 # dumb
 
                     self.wfile.write(json.dumps(ollama_chunk).encode('utf-8') + b'\n')
                     # wfile.flush()
@@ -108,6 +119,10 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 out = llm.create_chat_completion(
                     messages=[{'role': 'user', 'content': prompt}],
                     max_tokens=max_tokens,
+                    top_p=top_p,
+                    top_k=top_k,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty,
                     temperature=temperature,
                     stream=False,
                 )
