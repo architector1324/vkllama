@@ -22,5 +22,6 @@ def run(args):
         for chunk in response.iter_lines():
             msg = json.loads(chunk)
             print(msg['response'], end='', flush=True)
+        print()
     except Exception as e:
         print(f'An unexpected error occurred: {e}')
