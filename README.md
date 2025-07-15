@@ -148,18 +148,18 @@ You can run the `vkllama` server manually or set it up as a Systemd service for 
 To start the server manually:
 
 ```bash
-vkllama serve [--host 0.0.0.0] [--port 11434] [--models ~/.vkllama/models]
+vkllama serve [--host 0.0.0.0] [--port 11435] [--models ~/.vkllama/models]
 ```
 
 *   `--host`: The IP address the server will bind to. (Default: `0.0.0.0`)
-*   `--port`: The port the server will listen on. (Default: `11434`)
+*   `--port`: The port the server will listen on. (Default: `11435`)
 *   `--models`: The path to your models directory containing `models.json` and GGUF files. (Default: `~/.vkllama/models`)
 
 Example:
 ```bash
 vkllama serve
 ```
-You will see output indicating the server has started, e.g.: `Starting vkllama server on http://0.0.0.0:11434`
+You will see output indicating the server has started, e.g.: `Starting vkllama server on http://0.0.0.0:11435`
 
 ### Systemd Service (Recommended for Production)
 
@@ -204,7 +204,7 @@ Using Systemd ensures `vkllama` starts automatically on boot, restarts if it cra
 To list models configured on the `vkllama` server:
 
 ```bash
-vkllama list [--address 0.0.0.0:11434]
+vkllama list [--address 0.0.0.0:11435]
 ```
 
 Example output:
@@ -229,7 +229,7 @@ vkllama run -m <model_name> [OPTIONS] <prompt>
 *   `--seed`: Specify a numerical seed for reproducible text generation.
 *   `-s` / `--stream`: Enable streaming output (response appears word by word).
 *   `-t` / `--think`: Enable advanced, iterative reasoning. *Note: This flag is currently not implemented in the server logic.*
-*   `-a` / `--address`: Server host address (e.g., `localhost:11434`). (Default: `0.0.0.0:11434`)
+*   `-a` / `--address`: Server host address (e.g., `localhost:11435`). (Default: `0.0.0.0:11435`)
 *   `prompt`: The text prompt for the model. Enclose in quotes if it contains spaces.
 
 Example:
@@ -246,6 +246,6 @@ vkllama run -m qwen3 -s "Explain quantum computing in simple terms."
 
 ## Ollama Compatibility
 
-As `vkllama` implements an Ollama-compatible API, you can use any client, library, or application designed to work with Ollama. Simply configure your Ollama client to point to your `vkllama` server's address and port (e.g., `http://localhost:11434`).
+As `vkllama` implements an Ollama-compatible API, you can use any client, library, or application designed to work with Ollama. Simply configure your Ollama client to point to your `vkllama` server's address and port (e.g., `http://localhost:11435`).
 
 This allows you to leverage the `vkllama` backend with its Vulkan performance benefits while using the familiar Ollama ecosystem.

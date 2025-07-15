@@ -112,6 +112,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             request_payload = json.loads(post_data.decode('utf-8'))
 
+            # print(f'DEBUG: {request_payload}')
+
             # https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion
             model_name = request_payload.get('model', DEFAULT_MODEL)
             prompt = request_payload.get('prompt')
@@ -243,6 +245,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             request_payload = json.loads(post_data.decode('utf-8'))
+
+            # print(f'DEBUG: {request_payload}')
 
             model_name = request_payload.get('model', DEFAULT_MODEL)
             messages = request_payload.get('messages')
