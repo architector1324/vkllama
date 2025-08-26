@@ -38,6 +38,13 @@ def calculate_file_sha256(filepath):
         return 'sha256:error_calculating_digest'
 
 
+def fix_model_name(model_name):
+    parts = model_name.split(':')
+    if len(parts) == 1:
+        parts.append('latest')
+    return ':'.join(parts)
+
+
 class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/api/tags':
@@ -50,7 +57,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             expanded_models_path = os.path.expanduser(models_path)
             models = []
             for model_info in get_models():
-                model_name = model_info['name']
+                model_name = fix_model_name(model_info['name'])
                 full_model_path = os.path.join(expanded_models_path, model_info['filename'])
 
                 # get info
@@ -115,7 +122,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             # print(f'DEBUG: {request_payload}')
 
             # https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion
-            model_name = request_payload.get('model', DEFAULT_MODEL)
+            model_name = fix_model_name(request_payload.get('model', DEFAULT_MODEL))
             prompt = request_payload.get('prompt')
             system_prompt = request_payload.get('system', None)
             stream = request_payload.get('stream', True)
@@ -248,7 +255,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
 
             # print(f'DEBUG: {request_payload}')
 
-            model_name = request_payload.get('model', DEFAULT_MODEL)
+            model_name = fix_model_name(request_payload.get('model', DEFAULT_MODEL))
             messages = request_payload.get('messages')
             stream = request_payload.get('stream', True) # Ollama's default for chat API is stream=True
 
