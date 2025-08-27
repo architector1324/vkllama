@@ -39,8 +39,17 @@ COMMANDS = [
     {
         'cmd': '/continue',
         'help': 'continue model answer'
+    },
+    {
+        'cmd': '/hack',
+        'help': 'start answer as model and continue'
+    },
+    {
+        'cmd': '/json',
+        'help': 'show full chat in json (use `/json pretty` for ident)'
     }
 ]
+
 
 def chat(model, system, address, seed):
     messages = []
@@ -50,6 +59,8 @@ def chat(model, system, address, seed):
         messages.append({'role': 'system', 'content': system})
 
     while True:
+        model_turn = False
+
         # input prompt
         try:
             prompt = input('> ').strip()
@@ -129,10 +140,33 @@ def chat(model, system, address, seed):
                 continue
             except json.JSONDecodeError as e:
                 print(f'An unexpected error occurred: {e}')
+        elif prompt.startswith('/continue'):
+            model_turn = True
+        elif prompt.startswith('/hack'):
+            parts = prompt.split(' ')
+            prompt = ' '.join(parts[1:]).strip()
+            messages.append({'role': 'user', 'content': prompt})
+
+            # model prompt
+            try:
+                model_prompt = input(f'[{model}] > ').strip()
+                messages.append({'role': 'assistant', 'content': model_prompt})
+            except EOFError as _:
+                print()
+                return
+            except KeyboardInterrupt as _:
+                print()
                 continue
+            model_turn = True
+        elif prompt.startswith('/json'):
+            parts = prompt.split(' ')
+            indent = 2 if len(parts) > 1 and parts[1].startswith('pretty') else None
+            chat = json.dumps(messages, indent=indent, ensure_ascii=False)
+            print(chat)
+            continue
 
         # append message
-        if not prompt.startswith('/continue'):
+        if not model_turn:
             messages.append({'role': 'user', 'content': prompt})
 
         # generate
@@ -166,8 +200,6 @@ def chat(model, system, address, seed):
                 messages.append({'role': 'assistant', 'content': answer.strip()})
         else:
             messages[1]['content'] += answer.strip()
-
-        print(messages)
 
 
 def generate(prompt, system, model, address, seed, stream):
