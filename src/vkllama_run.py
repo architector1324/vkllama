@@ -47,6 +47,10 @@ COMMANDS = [
     {
         'cmd': '/json',
         'help': 'show full chat in json (use `/json pretty` for ident)'
+    },
+    {
+        'cmd': '/usage',
+        'help': 'calculate how many tokens chat uses'
     }
 ]
 
@@ -164,6 +168,22 @@ def chat(model, system, address, seed):
             chat = json.dumps(messages, indent=indent, ensure_ascii=False)
             print(chat)
             continue
+        elif prompt.startswith('/usage'):
+            payload = {
+                'model': model,
+                'seed': seed,
+                'stream': False,
+                'messages': messages,
+                'options': {'num_predict': 0}
+            }
+
+            try:
+                response = requests.post(VKLLAMA_CHAT_URL.format(address=address), json=payload, stream=False).json()
+                print(response['prompt_eval_count'])
+                continue
+            except Exception as e:
+                print(f'An unexpected error occurred: {e}')
+                return
 
         # append message
         if not model_turn:
