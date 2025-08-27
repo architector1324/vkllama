@@ -19,7 +19,8 @@ if __name__ == '__main__':
     run_parser.add_argument('-s', '--stream', action='store_true', help='Stream output')
     run_parser.add_argument('-t', '--think', action='store_true', help='Enable advanced, iterative reasoning for the model to refine outputs. May increase processing time and token usage.')
     run_parser.add_argument('-a', '--address', default='0.0.0.0:11435', type=str, help='Server host address')
-    run_parser.add_argument('prompt', nargs='+', type=str, help='Prompt for model')
+    run_parser.add_argument('--sys', default=None, type=str, help='System prompt for model')
+    run_parser.add_argument('prompt', nargs='*', default=None, type=str, help='Prompt for model')
     run_parser.add_argument('--help', action='help')
 
     # list
