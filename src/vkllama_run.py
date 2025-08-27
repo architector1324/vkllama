@@ -37,6 +37,10 @@ COMMANDS = [
         'help': 'load chat from json file'
     },
     {
+        'cmd': '/chat',
+        'help': 'load chat from json instantly (ex. `/chat [{"role": "user", "content": "2 + 2 ="}, {"role": "assistant", "content": "4"}]`)'
+    },
+    {
         'cmd': '/continue',
         'help': 'continue model answer'
     },
@@ -144,6 +148,24 @@ def chat(model, system, address, seed):
                 continue
             except json.JSONDecodeError as e:
                 print(f'An unexpected error occurred: {e}')
+                continue
+        elif prompt.startswith('/chat'):
+            parts = prompt.split(' ')
+            raw = ' '.join(parts[1:]).strip()
+
+            try:
+                messages = json.loads(raw)
+                print('Chat loaded.')
+
+                for msg in messages:
+                    if msg['role'] == 'user':
+                        print(f'> {msg["content"].strip()}')
+                    elif msg['role'] == 'assistant':
+                        print(f'{msg["content"].strip()}\n\n')
+                continue
+            except json.JSONDecodeError as e:
+                print(f'An unexpected error occurred: {e}')
+                continue
         elif prompt.startswith('/continue'):
             model_turn = True
         elif prompt.startswith('/hack'):
@@ -178,12 +200,15 @@ def chat(model, system, address, seed):
             }
 
             try:
-                response = requests.post(VKLLAMA_CHAT_URL.format(address=address), json=payload, stream=False).json()
-                print(response['prompt_eval_count'])
+                response = requests.post(VKLLAMA_CHAT_URL.format(address=address), json=payload, stream=False)
+                response.raise_for_status()
+
+                tokens = response.json()['prompt_eval_count']
+                print(tokens)
                 continue
             except Exception as e:
                 print(f'An unexpected error occurred: {e}')
-                return
+                continue
 
         # append message
         if not model_turn:
@@ -211,7 +236,7 @@ def chat(model, system, address, seed):
             print('\n')
         except Exception as e:
             print(f'An unexpected error occurred: {e}')
-            return
+            continue
         except KeyboardInterrupt as _:
             print()
             
