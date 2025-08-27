@@ -52,7 +52,7 @@ def chat(model, system, address, seed):
         except EOFError as _:
             print()
             return
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as _:
             print()
             continue
 
@@ -114,7 +114,14 @@ def chat(model, system, address, seed):
             try:
                 with open(filename, 'r') as f:
                     messages = json.load(f)
-                    print(f'Chat loaded: {filename}.')
+
+                    print(f'Chat loaded: "{filename}".')
+
+                    for msg in messages:
+                        if msg['role'] == 'user':
+                            print(f'> {msg["content"].strip()}')
+                        elif msg['role'] == 'assistant':
+                            print(f'{msg["content"].strip()}\n\n')
                 continue
             except json.JSONDecodeError as e:
                 print(f'An unexpected error occurred: {e}')
@@ -141,7 +148,7 @@ def chat(model, system, address, seed):
                 msg = json.loads(chunk)
                 answer += msg['message']['content']
                 print(msg['message']['content'], end='', flush=True)
-            print()
+            print('\n')
 
             # append answer
             messages.append({'role': 'assistant', 'content': answer.strip()})
