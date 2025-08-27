@@ -29,6 +29,10 @@ COMMANDS = [
         'help': 'get/set context window'
     },
     {
+        'cmd': '/lim',
+        'help': 'set max tokens output limit'
+    },
+    {
         'cmd': '/save',
         'help': 'save chat to file (leave empty for automatic filename)'
     },
@@ -62,6 +66,7 @@ COMMANDS = [
 def chat(model, system, address, seed):
     messages = []
     ctx = 2048
+    limit = 2048
 
     if system:
         messages.append({'role': 'system', 'content': system})
@@ -118,6 +123,20 @@ def chat(model, system, address, seed):
             except ValueError as e:
                 print(f'An unexpected error occurred: {e}')
                 continue
+        elif prompt.startswith('/lim'):
+            parts = prompt.split(' ')
+            if len(parts) == 1:
+                print(limit)
+                continue
+
+            try:
+                limit = int(parts[1])
+                print(f'Limit set: {limit}')
+                continue
+            except ValueError as e:
+                print(f'An unexpected error occurred: {e}')
+                continue
+
         elif prompt.startswith('/save'):
             parts = prompt.split(' ')
             filename = f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.json' if len(parts) == 1 else parts[1].strip()
@@ -196,7 +215,10 @@ def chat(model, system, address, seed):
                 'seed': seed,
                 'stream': False,
                 'messages': messages,
-                'options': {'num_predict': 0}
+                'options': {
+                    'num_ctx': ctx,
+                    'num_predict': 1
+                }
             }
 
             try:
@@ -220,7 +242,10 @@ def chat(model, system, address, seed):
             'seed': seed,
             'stream': True,
             'messages': messages,
-            'options': {'num_ctx': ctx}
+            'options': {
+                'num_ctx': ctx,
+                'num_predict': limit
+            }
         }
 
         answer = ''
