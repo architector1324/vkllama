@@ -35,6 +35,10 @@ COMMANDS = [
     {
         'cmd': '/load',
         'help': 'load chat from json file'
+    },
+    {
+        'cmd': '/continue',
+        'help': 'continue model answer'
     }
 ]
 
@@ -128,7 +132,8 @@ def chat(model, system, address, seed):
                 continue
 
         # append message
-        messages.append({'role': 'user', 'content': prompt})
+        if not prompt.startswith('/continue'):
+            messages.append({'role': 'user', 'content': prompt})
 
         # generate
         payload = {
@@ -139,22 +144,30 @@ def chat(model, system, address, seed):
             'options': {'num_ctx': ctx}
         }
 
+        answer = ''
+
         try:
             response = requests.post(VKLLAMA_CHAT_URL.format(address=address), json=payload, stream=True)
             response.raise_for_status()
 
-            answer = ''
             for chunk in response.iter_lines():
                 msg = json.loads(chunk)
                 answer += msg['message']['content']
                 print(msg['message']['content'], end='', flush=True)
             print('\n')
-
-            # append answer
-            messages.append({'role': 'assistant', 'content': answer.strip()})
         except Exception as e:
             print(f'An unexpected error occurred: {e}')
             return
+        except KeyboardInterrupt as _:
+            print()
+            
+        # append answer
+        if messages[-1]['role'] == 'user':
+                messages.append({'role': 'assistant', 'content': answer.strip()})
+        else:
+            messages[1]['content'] += answer.strip()
+
+        print(messages)
 
 
 def generate(prompt, system, model, address, seed, stream):
