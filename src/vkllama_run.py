@@ -65,8 +65,8 @@ COMMANDS = [
 
 def chat(model, system, address, seed):
     messages = []
-    ctx = 2048
-    limit = 2048
+    ctx = 4096
+    limit = 4096
 
     if system:
         messages.append({'role': 'system', 'content': system})

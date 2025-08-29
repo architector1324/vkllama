@@ -130,8 +130,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
             # options
             options = request_payload.get('options', {})
 
-            n_ctx = options.get('num_ctx', 2048)
-            max_tokens = options.get('num_predict', 2048)
+            n_ctx = options.get('num_ctx', 4096)
+            max_tokens = options.get('num_predict', 4096)
             temperature = options.get('temperature', 0.8)
             top_p = options.get('top_p', 0.9)
             top_k = options.get('top_k', 40)
@@ -267,8 +267,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             options = request_payload.get('options', {})
-            n_ctx = options.get('num_ctx', 2048)
-            max_tokens = options.get('num_predict', 2048)
+            n_ctx = options.get('num_ctx', 4096)
+            max_tokens = options.get('num_predict', 4096)
             temperature = options.get('temperature', 0.8)
             top_p = options.get('top_p', 0.9)
             top_k = options.get('top_k', 40)
