@@ -1,5 +1,6 @@
 import os
 import json
+import psutil
 import random
 import hashlib
 import datetime
@@ -45,10 +46,20 @@ def fix_model_name(model_name):
     return ':'.join(parts)
 
 
+def get_memory_usage():
+    process = psutil.Process(os.getpid())
+    info = process.memory_info()
+    # print(info)
+    total_memory = info.vms + info.shared + info.data
+    return total_memory / 1024 / 1024
+
+
 class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/api/tags':
             self.handle_list_models()
+        elif self.path == '/api/ps':
+            self.handle_list_running()
         else:
             self.send_error(404, 'Not Found')
 
@@ -104,6 +115,9 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             print(f'Error handling /api/tags: {e}')
             self.send_error(500, 'Internal Server Error', f'An unexpected error occurred: {e}')
+
+    def handle_list_running():
+        pass
 
     def do_POST(self):
         if self.path == '/api/generate':
@@ -161,6 +175,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 seed=seed,
                 verbose=False
             )
+
+            print(f'RAM: {get_memory_usage()} mb.')
 
             # create messages
             messages = []
@@ -291,6 +307,8 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 seed=seed,
                 verbose=False
             )
+
+            print(f'RAM: {get_memory_usage()} mb.')
 
             if stream:
                 self.send_response(200)

@@ -6,7 +6,7 @@ python -m venv ./build/venv
 source ./build/venv/bin/activate
 
 pip install --upgrade pip
-pip install pyinstaller requests
+pip install pyinstaller requests psutil
 CMAKE_ARGS="-DGGML_VULKAN=on" pip install llama-cpp-python
 
 cp ./src/*.py -t build/
