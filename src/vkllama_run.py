@@ -3,7 +3,7 @@ import requests
 import datetime
 
 
-DEFAULT_MODEL = 'gemma3'
+DEFAULT_MODEL = 'gemma3n'
 VKLLAMA_GENERATE_URL = 'http://{address}/api/generate'
 VKLLAMA_CHAT_URL = 'http://{address}/api/chat'
 

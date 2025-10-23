@@ -166,6 +166,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
 
             expanded_models_path = os.path.expanduser(models_path)
             model_path = os.path.join(expanded_models_path, model_info['filename'])
+            thinking = model_info.get('thinking', False)
 
             # init llm
             llm = llama_cpp.Llama(
@@ -201,14 +202,34 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     stream=True,
                 )
 
+                think = False
                 for chunk in out:
                     # streaming
                     msg = chunk['choices'][0]['delta'].get('content', '')
-                    
+
+                    if thinking:
+                        if not think:
+                            think_content = None
+                            response_content = msg
+                        else:
+                            response_content = ''
+                            think_content = msg
+
+                        if msg.strip() == '<think>':
+                            think = True
+                            continue
+                        elif msg.strip() == '</think>':
+                            think = False
+                            continue
+                    else:
+                        think_content = None
+                        response_content = msg
+
                     ollama_chunk = {
                         'model': model_name,
                         'created_at': datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
-                        'response': msg,
+                        'response': response_content,
+                        'thinking': think_content,
                         'done': False
                     }
 
@@ -236,11 +257,19 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     stream=False,
                 )
 
-                response_content = out['choices'][0]['message']['content']
+                if thinking:
+                    think, answer = out['choices'][0]['message']['content'].split('</think>')
+
+                    think_content = think.replace('<think>', '').strip()
+                    response_content = answer.strip()
+                else:
+                    think_content = None
+                    response_content = out['choices'][0]['message']['content'].strip()
 
                 ollama_response = {
                     'model': model_name,
                     'created_at': datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
+                    'thinking': think_content,
                     'response': response_content,
                     'done': True,
                     'total_duration': 0, # dumb
@@ -299,6 +328,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
 
             expanded_models_path = os.path.expanduser(models_path)
             model_path = os.path.join(expanded_models_path, model_info['filename'])
+            thinking = model_info.get('thinking', False)
 
             llm = llama_cpp.Llama(
                 model_path=model_path,
@@ -326,6 +356,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     stream=True,
                 )
 
+                think = False
                 final_finish_reason = None
 
                 for chunk in response_generator:
@@ -333,12 +364,31 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     message_content = delta.get('content', '')
                     current_finish_reason = chunk['choices'][0].get('finish_reason')
 
+                    if thinking:
+                        if not think:
+                            think_content = None
+                            response_content = message_content
+                        else:
+                            response_content = ''
+                            think_content = message_content
+
+                        if message_content.strip() == '<think>':
+                            think = True
+                            continue
+                        elif message_content.strip() == '</think>':
+                            think = False
+                            continue
+                    else:
+                        think_content = None
+                        response_content = message_content
+
                     ollama_chunk = {
                         'model': model_name,
                         'created_at': datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
                         'message': {
                             'role': 'assistant',
-                            'content': message_content
+                            'content': response_content,
+                            'thinking': think_content
                         },
                         'done': False
                     }
@@ -386,12 +436,22 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                 usage = full_completion['usage']
                 finish_reason = full_completion['choices'][0].get('finish_reason', 'stop')
 
+                if thinking:
+                    think, answer = response_message['content'].split('</think>')
+
+                    think_content = think.replace('<think>', '').strip()
+                    response_content = answer.strip()
+                else:
+                    think_content = None
+                    response_content = response_message['content'].strip()
+
                 ollama_response = {
                     'model': model_name,
                     'created_at': datetime.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
                     'message': {
                         'role': response_message['role'],
-                        'content': response_message['content']
+                        'content': response_content,
+                        'thinking': think_content
                     },
                     'done': True,
                     'done_reason': finish_reason,
