@@ -202,7 +202,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     stream=True,
                 )
 
-                think = False
+                think = True
                 for chunk in out:
                     # streaming
                     msg = chunk['choices'][0]['delta'].get('content', '')
@@ -356,7 +356,7 @@ class VKLlamaRequestHandler(http.server.BaseHTTPRequestHandler):
                     stream=True,
                 )
 
-                think = False
+                think = True
                 final_finish_reason = None
 
                 for chunk in response_generator:
